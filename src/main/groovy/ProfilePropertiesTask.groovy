@@ -50,7 +50,7 @@ public class ProfilePropertiesTask extends AbstractTask {
             privateProps.load(new FileInputStream("$project.projectDir/$environment-private.properties"))
             log.debug("priv : $privateProps")
 
-            targetProps.putAll(evaluate(privateProps.findAll { targetProps.containsKey( it.key) == false } ))
+            targetProps.putAll(evaluate(privateProps.findAll { targetProps.containsKey(it.key) == false }))
             targetProps.putAll(evaluate(privateProps.findAll {
                 (System.properties[it.key] ?: System.getenv(it.key) ?: null) == null
             }))
@@ -69,30 +69,25 @@ public class ProfilePropertiesTask extends AbstractTask {
 
     def evaluate(def props) {
 
-        props.findAll { it.value.matches("^project.properties\\[(.*)\\]\$") }.each {
+        props
+                .each {
+            Object privateVal = evaluateValue(it.key)
 
-            def region = it.value =~ /(project.properties\[(.*)\])/;
-            if (region.matches()) {
-
-                Object privateVal = evaluateValue(it.key, it.value)
-
-                if (privateVal != null) {
-                    props.put(it.key, privateVal)
-                }
-
+            if (privateVal != null) {
+                props.put(it.key, privateVal)
             }
         }
         props
     }
 
-    def evaluateValue(def key, def value) {
-        def privateVal = null
+    def evaluateValue(def key) {
+        def privateVal
         try {
-            log.warn(" Undefined private property : `$key` -> $value")
+            log.debug(" Undefined private property : `$key`")
             privateVal = Eval.xy(project.properties, key, "x[y]")
             log.debug(" evaluated $privateVal")
             if (privateVal == null) {
-                log.warn("Trying to find fallback for  property  key " + key)
+                log.info("Trying to find fallback for  property  key " + key)
                 privateVal = System.properties[key] ?: System.getenv(key) ?: null
             }
         }

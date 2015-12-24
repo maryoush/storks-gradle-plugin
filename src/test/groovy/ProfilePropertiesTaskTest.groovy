@@ -1,4 +1,5 @@
 import org.gradle.api.Project
+import org.gradle.api.tasks.TaskExecutionException
 import spock.lang.Specification
 
 class ProfilePropertiesTaskTest extends Specification {
@@ -16,7 +17,8 @@ class ProfilePropertiesTaskTest extends Specification {
         project.tasks["fancyTask"].execute()
 
         then:
-        thrown(FileNotFoundException.class)
+        TaskExecutionException t = thrown()
+        t.getCause().getCause().class == FileNotFoundException.class
 
     }
 
@@ -87,9 +89,9 @@ class ProfilePropertiesTaskTest extends Specification {
         then:
         project.tasks["fancyTask"].execute()
 
-        props.foo == "bar"
+        props.foo == "this will overwrite public"
         props.baz == "glaz"
-        props.zlaz == "raz"
+        props.zlaz == "this is only private"
 
     }
 
@@ -97,8 +99,8 @@ class ProfilePropertiesTaskTest extends Specification {
 
         given:
         def props = [:]
-        System.setProperty("baz", "boo")
-        System.setProperty("zlaz", "jednak-wlazl")
+        System.setProperty("baz", "this will go from system")
+        System.setProperty("zlaz", "this will also go from system")
 
 
         when:
@@ -114,9 +116,9 @@ class ProfilePropertiesTaskTest extends Specification {
         then:
         project.tasks["fancyTask"].execute()
 
-        props.foo == "bar"
-        props.baz == "boo"
-        props.zlaz == "jednak-wlazl"
+        props.foo == "this will overwrite public"
+        props.baz == "this will go from system"
+        props.zlaz == "this will also go from system"
 
         cleanup:
         System.clearProperty("baz")
