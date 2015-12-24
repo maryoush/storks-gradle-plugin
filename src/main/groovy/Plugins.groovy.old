@@ -1,0 +1,174 @@
+/*
+ * [y] hybris Platform
+ *
+ * Copyright (c) 2000-2015 hybris AG
+ * All rights reserved.
+ *
+ * This software is the confidential and proprietary information of hybris
+ * ("Confidential Information"). You shall not disclose such Confidential
+ * Information and shall use it only in accordance with the terms of the
+ * license agreement you entered into with hybris.
+ */
+
+import org.ajoberstar.grgit.Grgit
+import org.cloudfoundry.client.lib.domain.CloudApplication
+import org.cloudfoundry.gradle.tasks.AbstractCloudFoundryTask
+import org.cloudfoundry.gradle.tasks.DeployCloudFoundryHelper
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.tasks.TaskAction
+
+import java.text.SimpleDateFormat
+
+class FrameFrogGradlePlugin implements Plugin<Project> {
+
+	@Override
+	void apply(final Project project) {
+		project.extensions.getExtraProperties().set("buildTime", buildTime())
+		project.extensions.getExtraProperties().set("buildBy", buildBy())
+		project.extensions.getExtraProperties().set("commitId", gitProperties.commitId)
+		project.extensions.getExtraProperties().set("branch", gitProperties.branch)
+		project.task('generateInactiveVariantURL', type: GenerateInactiveVariantURL)
+		project.task('scaleDownInactiveVariantToOneInstance', type: ScaleDownInactiveVariantToOneInstance)
+		project.task('stopInactiveVariantInstances', type: StopInactiveVariantInstances)
+	}
+
+	static def buildTime() {
+		def sdt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+		sdt.setTimeZone(TimeZone.getTimeZone("UTC"))
+		sdt.format(new Date())
+	}
+
+	static def buildBy() {
+		"${System.getProperty('user.name')}"
+	}
+
+	static gitProperties = generateProperties()
+
+	static def generateProperties() {
+
+		def path = findGitRoot()
+		if (!path.isEmpty()) {
+			def grgit = Grgit.open(dir: path)
+			[commitId: grgit.head().id, branch: grgit.branch.current.name]
+		} else {
+			[commitId: 'undefined', branch: 'undefined']
+		}
+	}
+
+	static def findGitRoot() {
+		if (new File('./.git').exists()) {
+			'.'
+		} else if (new File('../.git').exists()) {
+			'..'
+		} else {
+			''
+		}
+	}
+}
+
+@Mixin([DeployCloudFoundryHelper])
+class GenerateInactiveVariantURL extends AbstractCloudFoundryTask {
+
+	GenerateInactiveVariantURL() {
+		super()
+	}
+
+	@TaskAction
+	def generateFileWithURL() {
+
+		withCloudFoundryClient {
+
+			def schema = 'http';
+			if (project.hasProperty("schema")) {
+				schema = project.property("schema");
+			}
+
+			def apps = client.applications
+			String next = findNextVariantToDeploy(application, apps)
+			applyVariantSuffix(next)
+
+			CloudApplication app = client.getApplication(application)
+
+			File file = new File('inactiveServiceVersionURL')
+			if (file.exists()) {
+				file.delete()
+			}
+			file.createNewFile();
+
+			String url = schema + "://" + app.uris.get(0) + "/"
+
+			project.getExtensions().getExtraProperties().set('inactiveServiceVersionURL', url)
+
+			log "## Inactive variant url is ${url}"
+
+			file << url;
+		}
+	}
+}
+
+@Mixin([DeployCloudFoundryHelper])
+class ScaleDownInactiveVariantToOneInstance extends AbstractCloudFoundryTask {
+
+	ScaleDownInactiveVariantToOneInstance() {
+		super()
+	}
+
+	@TaskAction
+	scaleDownToOne() {
+
+		withCloudFoundryClient {
+
+			def apps = client.applications
+			String next = findNextVariantToDeploy(application, apps)
+
+			applyVariantSuffix(next)
+
+			try {
+				CloudApplication app = client.getApplication(application)
+
+				if (app.instances > 1) {
+					log "## ${application} setting number of instances to 1 ##"
+					client.updateApplicationInstances(application, 1)
+				} else {
+					log "## ${application} already has 1 instance ##"
+				}
+			} catch (Exception ex) {
+				log "## ${application} no application to scale down found"
+			}
+		}
+	}
+}
+
+@Mixin([DeployCloudFoundryHelper])
+class StopInactiveVariantInstances extends AbstractCloudFoundryTask {
+
+	StopInactiveVariantInstances() {
+		super()
+	}
+
+	@TaskAction
+	stop() {
+
+		withCloudFoundryClient {
+
+			def apps = client.applications
+			String next = findNextVariantToDeploy(application, apps)
+
+			applyVariantSuffix(next)
+
+			try {
+				CloudApplication app = client.getApplication(application)
+
+				if (app.state != CloudApplication.AppState.STOPPED) {
+					log "## stoping ${application} ##"
+					client.stopApplication(application)
+				} else {
+					log "## ${application} already stopped ##"
+				}
+			} catch (Exception ex) {
+				log "## ${application} no application to stop found"
+			}
+		}
+	}
+}

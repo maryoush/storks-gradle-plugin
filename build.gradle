@@ -1,0 +1,59 @@
+/*
+ * [y] hybris Platform
+ *
+ * Copyright (c) 2000-2015 hybris AG
+ * All rights reserved.
+ *
+ * This software is the confidential and proprietary information of hybris
+ * ("Confidential Information"). You shall not disclose such Confidential
+ * Information and shall use it only in accordance with the terms of the
+ * license agreement you entered into with hybris.
+ */
+apply plugin: 'groovy'
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
+
+group = 'com.hybris.cdm.storks'
+version = "0.6.${System.getenv().getOrDefault('bamboo_buildNumber', 'development')}"
+
+repositories {
+	mavenLocal()
+	mavenCentral()
+}
+
+dependencies {
+	compile gradleApi()
+    testCompile group: 'org.spockframework', name: 'spock-core', version: '1.0-groovy-2.3' ,
+            {
+                exclude module: "groovy-all"
+            }
+
+}
+
+jar {
+	baseName 'storks-gradle-plugin'
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+		}
+	}
+}
+
+publishing {
+	repositories {
+		maven {
+			url 'https://repository.hybris.com/yaas-release'
+			credentials {
+				username = 'hybris-maven-deploy'
+				password = "${System.getenv('bamboo_hybris_maven_deploy_password')}"
+			}
+		}
+	}
+}
+
+task wrapper(type: Wrapper) {
+	gradleVersion = '2.3'
+}
