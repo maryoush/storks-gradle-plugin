@@ -4,7 +4,7 @@ import org.gradle.api.tasks.TaskAction
 
 
 /**
- * Loads XXX-public.properties and XXX-private.properties merges them and puts them all into given {@link #effectiveProperties}.
+ * Loads XXX-public.properties and XXX-private.properties merges them and puts them all into given {@link ProfilePropertiesTask#effectiveProperties}.
  * Where XXX is the env mnemonic steered by Gradle property - default value 'aws-stage' , other valid value 'aws-prod'.
  *
  * The sensitive properties values should be provided either in  env-private.properties or via System(Environment).
@@ -15,6 +15,45 @@ import org.gradle.api.tasks.TaskAction
 @Slf4j
 public class ProfilePropertiesTask extends AbstractTask {
 
+
+    class PropertyValue {
+
+        protected def val
+
+        PropertyValue(def value) {
+            this.val = value
+        }
+
+        @Override
+        String toString() {
+            "$val"
+        }
+
+    }
+
+    class ConfidentialPropertyValue extends PropertyValue {
+
+
+        ConfidentialPropertyValue(def value) {
+            super(value)
+        }
+
+
+        @Override
+        String toString() {
+            def length = "$val".length()
+            if (length < 5)
+                '*'.multiply(length)
+            else {
+                String str = val as String
+                String first = str.charAt(0)
+                String value =  first.concat('*'.multiply(length - 1 - 3)).concat(str.substring(length - 3))
+                value
+            }
+        }
+
+    }
+
     def defaultEnv = "aws-stage"
 
     def effectiveProperties
@@ -23,6 +62,24 @@ public class ProfilePropertiesTask extends AbstractTask {
         super()
     }
 
+
+    def propsLoader = {
+        file, wrapper ->
+            def props = new Properties()
+            props.load(new FileInputStream("$project.projectDir/$file"))
+            props.collectEntries { pair -> wrapper(pair) }
+    }
+
+
+    def publicWrapper = {
+        pair ->
+            [pair.key, new PropertyValue(pair.value)]
+    }
+
+    def privateWrapper = {
+        pair ->
+            [pair.key, new ConfidentialPropertyValue(pair.value)]
+    }
 
     @TaskAction
     def performTask() {
@@ -39,32 +96,25 @@ public class ProfilePropertiesTask extends AbstractTask {
 
 
         def targetProps = new Properties()
-        def publicProps = new Properties()
-        publicProps.load(new FileInputStream("$project.projectDir/$environment-public.properties"))
 
-
-        targetProps << evaluate(publicProps)
-
-        def privateProps = new Properties()
+        targetProps << propsLoader("$environment-public.properties", publicWrapper)
         try {
-            privateProps.load(new FileInputStream("$project.projectDir/$environment-private.properties"))
-            log.debug("priv : $privateProps")
-
-            targetProps.putAll(evaluate(privateProps.findAll { targetProps.containsKey(it.key) == false }))
-            targetProps.putAll(evaluate(privateProps.findAll {
-                (System.properties[it.key] ?: System.getenv(it.key) ?: null) == null
-            }))
+            targetProps << propsLoader("$environment-private.properties", privateWrapper)
         }
         catch (ouch) {
             log.warn("Missing private properties configuration file : $environment-private.properties")
         }
+
+        targetProps //
+                .findAll { pair -> evaluateValue(pair.key) != null } //
+                .each { pair -> targetProps.put(pair.key, new ConfidentialPropertyValue(evaluateValue(pair.key))) }
 
 
         log.warn("###############################")
         log.warn("Adjusting properties :")
         log.warn("###############################")
         targetProps.each({ k, v -> log.warn("   $k -> $v") })
-        effectiveProperties << targetProps
+        effectiveProperties << targetProps.collectEntries { entry -> [entry.key, entry.value.val] }
     }
 
     def evaluate(def props) {

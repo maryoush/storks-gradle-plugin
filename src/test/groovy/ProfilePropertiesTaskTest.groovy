@@ -4,10 +4,16 @@ import spock.lang.Specification
 
 class ProfilePropertiesTaskTest extends Specification {
 
+
+    def loadFile = {
+        name ->
+            new File(ProfilePropertiesTaskTest.class.getResource(name).getFile())
+    }
+
     def assureTaskFailsForNonExistingProfile() {
 
         Project project = org.gradle.testfixtures.ProjectBuilder.builder()
-                .withProjectDir(new File("case1"))
+                .withProjectDir(new File("."))
                 .build()
 
 
@@ -31,7 +37,7 @@ class ProfilePropertiesTaskTest extends Specification {
 
         when:
         Project project = org.gradle.testfixtures.ProjectBuilder.builder()
-                .withProjectDir(new File(ProfilePropertiesTaskTest.class.getResource("case2").getFile()))
+                .withProjectDir(loadFile.call("case2"))
                 .build()
 
 
@@ -53,7 +59,7 @@ class ProfilePropertiesTaskTest extends Specification {
 
         when:
         Project project = org.gradle.testfixtures.ProjectBuilder.builder()
-                .withProjectDir(new File(ProfilePropertiesTaskTest.class.getResource("case3").getFile()))
+                .withProjectDir(loadFile.call("case3"))
                 .build()
 
 
@@ -66,6 +72,7 @@ class ProfilePropertiesTaskTest extends Specification {
 
         props.foo == "bar"
         props.baz == "zraz"
+        props.some == "property with open text"
 
         cleanup:
         System.clearProperty("baz")
@@ -78,7 +85,7 @@ class ProfilePropertiesTaskTest extends Specification {
 
         when:
         Project project = org.gradle.testfixtures.ProjectBuilder.builder()
-                .withProjectDir(new File(ProfilePropertiesTaskTest.class.getResource("case4").getFile()))
+                .withProjectDir(loadFile.call("case4"))
                 .build()
 
 
@@ -93,6 +100,16 @@ class ProfilePropertiesTaskTest extends Specification {
         props.baz == "glaz"
         props.zlaz == "this is only private"
 
+        //test data obfuscation
+        props.one == "1"
+        props.two == "22"
+        props.three == "333"
+        props.four == "4444"
+        props.five == "55555"
+        props.six == "666666"
+
+
+
     }
 
     def assurePropertiesHierarchy() {
@@ -105,7 +122,7 @@ class ProfilePropertiesTaskTest extends Specification {
 
         when:
         Project project = org.gradle.testfixtures.ProjectBuilder.builder()
-                .withProjectDir(new File(ProfilePropertiesTaskTest.class.getResource("case5").getFile()))
+                .withProjectDir(loadFile.call("case5"))
                 .build()
 
 
@@ -125,4 +142,32 @@ class ProfilePropertiesTaskTest extends Specification {
         System.clearProperty("zlaz")
     }
 
+
+
+    def assureSystemPropertiesAlwaysWin() {
+
+        given:
+        def props = [:]
+        System.setProperty("foo", "this will  go from system")
+
+
+        when:
+        Project project = org.gradle.testfixtures.ProjectBuilder.builder()
+                .withProjectDir(loadFile.call("case6"))
+                .build()
+
+
+        project
+                .task('fancyTask', type: ProfilePropertiesTask)
+                .setProperty('effectiveProperties', props)
+
+        then:
+        project.tasks["fancyTask"].execute()
+
+        props.foo == "this will  go from system"
+
+
+        cleanup:
+        System.clearProperty("foo")
+    }
 }
