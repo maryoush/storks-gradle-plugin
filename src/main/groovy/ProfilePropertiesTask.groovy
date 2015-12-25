@@ -42,14 +42,31 @@ public class ProfilePropertiesTask extends AbstractTask {
         @Override
         String toString() {
             def length = "$val".length()
-            if (length < 5)
+            if (length < 3)
                 '*'.multiply(length)
             else {
-                String str = val as String
-                String first = str.charAt(0)
-                String value =  first.concat('*'.multiply(length - 1 - 3)).concat(str.substring(length - 3))
-                value
+                //case 3
+                if (length == 3)
+                    anonimise(val, 1, 1)
+                else if (length == 4)
+                    anonimise(val, 2, 1)
+                else if (length == 5)
+                    anonimise(val, 3, 1)
+                else if (length == 6)
+                    anonimise(val, 3, 2)
+                else if (length == 7)
+                    anonimise(val, 3, 3)
+                else
+                    anonimise(val, length - 4 , 3)
             }
+        }
+
+        def anonimise = {
+
+            input, stars, end ->
+                def length = input.length()
+                String first = input.charAt(0)
+                first.concat('*'.multiply(stars)).concat(input.substring(length - end))
         }
 
     }
