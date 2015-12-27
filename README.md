@@ -13,10 +13,10 @@ The env (set by environment variables) or system ones (provided by -P) overwrite
 There has to be at least public properties provided others are optional.
 
 # Input 
-Plugin expects a _profile name_ to be provided , possible values 'aws-prod' or 'aws-stage' if none provided or
+* Plugin expects a _profile name_ to be provided , possible values 'aws-prod' or 'aws-stage' if none provided or
 unrecognized one provided a 'aws-stage' is used.
 
-Plugin injects a bound properties into map provided from outside.
+* Plugin injects a bound properties into map provided from outside - _effectiveProperties_.
 
 # Run, test locally
 
