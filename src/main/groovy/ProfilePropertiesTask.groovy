@@ -9,13 +9,25 @@ import org.gradle.api.tasks.TaskAction
  *
  * The sensitive properties values should be provided either in  env-private.properties or via System(Environment).
  * The order of evaluation is, the latter values overwrite previous ones : public -> private -> system/env properties.
- * The property needs to mentioned in
+ * It does also anonymised display of bound properties
  * @return
  */
 @Slf4j
 public class ProfilePropertiesTask extends AbstractTask {
 
+    /**
+     * Default profile name
+     */
+    def defaultEnv = "aws-stage"
 
+    /**
+     * A map to be consumedś
+     */
+    def effectiveProperties
+
+    /**
+     * Public property value
+     */
     class PropertyValue {
 
         protected def val
@@ -31,6 +43,9 @@ public class ProfilePropertiesTask extends AbstractTask {
 
     }
 
+    /**
+     * Private or passed dynamic - thus said to be confidential property value
+     */
     class ConfidentialPropertyValue extends PropertyValue {
 
 
@@ -45,23 +60,22 @@ public class ProfilePropertiesTask extends AbstractTask {
             if (length < 3)
                 '*'.multiply(length)
             else {
-                //case 3
                 if (length == 3)
-                    anonimise(val, 1, 1)
+                    anonymise(val, 1, 1) //a*a
                 else if (length == 4)
-                    anonimise(val, 2, 1)
+                    anonymise(val, 2, 1) //a**a
                 else if (length == 5)
-                    anonimise(val, 3, 1)
+                    anonymise(val, 3, 1) //a***a
                 else if (length == 6)
-                    anonimise(val, 3, 2)
+                    anonymise(val, 3, 2) //a***aa
                 else if (length == 7)
-                    anonimise(val, 3, 3)
+                    anonymise(val, 3, 3) //a***aaa
                 else
-                    anonimise(val, length - 4 , 3)
+                    anonymise(val, length - 4, 3) //a***..aa
             }
         }
 
-        def anonimise = {
+        def anonymise = {
 
             input, stars, end ->
                 def length = input.length()
@@ -71,9 +85,6 @@ public class ProfilePropertiesTask extends AbstractTask {
 
     }
 
-    def defaultEnv = "aws-stage"
-
-    def effectiveProperties
 
     ProfilePropertiesTask() {
         super()
@@ -87,7 +98,6 @@ public class ProfilePropertiesTask extends AbstractTask {
             props.collectEntries { pair -> wrapper(pair) }
     }
 
-
     def publicWrapper = {
         pair ->
             [pair.key, new PropertyValue(pair.value)]
@@ -98,10 +108,21 @@ public class ProfilePropertiesTask extends AbstractTask {
             [pair.key, new ConfidentialPropertyValue(pair.value)]
     }
 
+
+    def usage = {
+        log.error("The effective properties needs to be provided explicitly to not null ")
+        throw new IllegalStateException("The effective properties needs to be provided explicitly to not null ")
+    }
+
     @TaskAction
     def performTask() {
 
-        log.warn("root dir " + project.getProjectDir())
+        if (effectiveProperties == null) {
+            usage()
+        }
+
+
+        log.debug("root dir " + project.getProjectDir())
 
         def environment = (project.hasProperty("aws-prod") ? "aws-prod" : defaultEnv)
 
@@ -127,9 +148,9 @@ public class ProfilePropertiesTask extends AbstractTask {
                 .each { pair -> targetProps.put(pair.key, new ConfidentialPropertyValue(evaluateValue(pair.key))) }
 
 
-        log.warn("###############################")
-        log.warn("Adjusting properties :")
-        log.warn("###############################")
+        log.info("###############################")
+        log.info("Adjusting properties :")
+        log.info("###############################")
         targetProps.each({ k, v -> log.warn("   $k -> $v") })
         effectiveProperties << targetProps.collectEntries { entry -> [entry.key, entry.value.val] }
     }

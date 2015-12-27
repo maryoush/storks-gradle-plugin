@@ -18,7 +18,7 @@ class ProfilePropertiesTaskTest extends Specification {
 
 
         project.task('fancyTask', type: ProfilePropertiesTask)
-
+                .setProperty('effectiveProperties', new HashMap())
         when:
         project.tasks["fancyTask"].execute()
 
@@ -28,11 +28,31 @@ class ProfilePropertiesTaskTest extends Specification {
 
     }
 
+    def assureFailsForMissingEffectiveProperties() {
 
-    def assureTaskFailsForExistingProfile() {
+
+        when:
+        Project project = org.gradle.testfixtures.ProjectBuilder.builder()
+                .withProjectDir(loadFile.call("case2"))
+                .build()
+
+
+        project
+                .task('fancyTask', type: ProfilePropertiesTask)
+
+        project.tasks["fancyTask"].execute()
+
+        then:
+        TaskExecutionException t = thrown()
+        t.getCause().class == IllegalStateException.class
+
+    }
+
+
+
+    def assureLoadsEmptyPublicProperties() {
 
         given:
-        //System.setProperty("Paws-prod", "aws-prod")
         def props = [:]
 
         when:
