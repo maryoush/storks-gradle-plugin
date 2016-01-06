@@ -1,3 +1,5 @@
+package com.hybris.profile
+
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskExecutionException
 import spock.lang.Specification
@@ -33,7 +35,7 @@ class ProfilePropertiesTaskTest extends Specification {
 
         when:
         Project project = org.gradle.testfixtures.ProjectBuilder.builder()
-                .withProjectDir(loadFile.call("case2"))
+                .withProjectDir(loadFile.call("/case2"))
                 .build()
 
 
@@ -49,7 +51,6 @@ class ProfilePropertiesTaskTest extends Specification {
     }
 
 
-
     def assureLoadsEmptyPublicProperties() {
 
         given:
@@ -57,7 +58,7 @@ class ProfilePropertiesTaskTest extends Specification {
 
         when:
         Project project = org.gradle.testfixtures.ProjectBuilder.builder()
-                .withProjectDir(loadFile.call("case2"))
+                .withProjectDir(loadFile.call("/case2"))
                 .build()
 
 
@@ -79,7 +80,7 @@ class ProfilePropertiesTaskTest extends Specification {
 
         when:
         Project project = org.gradle.testfixtures.ProjectBuilder.builder()
-                .withProjectDir(loadFile.call("case3"))
+                .withProjectDir(loadFile.call("/case3"))
                 .build()
 
 
@@ -105,7 +106,7 @@ class ProfilePropertiesTaskTest extends Specification {
 
         when:
         Project project = org.gradle.testfixtures.ProjectBuilder.builder()
-                .withProjectDir(loadFile.call("case4"))
+                .withProjectDir(loadFile.call("/case4"))
                 .build()
 
 
@@ -129,7 +130,6 @@ class ProfilePropertiesTaskTest extends Specification {
         props.six == "666666"
 
 
-
     }
 
     def assurePropertiesHierarchy() {
@@ -142,7 +142,7 @@ class ProfilePropertiesTaskTest extends Specification {
 
         when:
         Project project = org.gradle.testfixtures.ProjectBuilder.builder()
-                .withProjectDir(loadFile.call("case5"))
+                .withProjectDir(loadFile.call("/case5"))
                 .build()
 
 
@@ -163,7 +163,6 @@ class ProfilePropertiesTaskTest extends Specification {
     }
 
 
-
     def assureSystemPropertiesAlwaysWin() {
 
         given:
@@ -173,7 +172,7 @@ class ProfilePropertiesTaskTest extends Specification {
 
         when:
         Project project = org.gradle.testfixtures.ProjectBuilder.builder()
-                .withProjectDir(loadFile.call("case6"))
+                .withProjectDir(loadFile.call("/case6"))
                 .build()
 
 
@@ -190,4 +189,55 @@ class ProfilePropertiesTaskTest extends Specification {
         cleanup:
         System.clearProperty("foo")
     }
+
+
+    def assurePropsLoadedViaClassLoader() {
+
+        given:
+        System.setProperty("srub", "this will go from system")
+
+
+        when:
+        def propsLoader =
+                new PropertiesLoader("someDir/aws-stage-tests-public.properties", "otherDir/aws-stage-tests-private.properties")
+
+        then:
+        def targetProps = propsLoader.load(loadFile("/case7").getAbsolutePath())
+
+
+        targetProps.foo == "private foo"
+        targetProps.pub == "not public any more"
+        targetProps.grub == "this is grub"
+        targetProps.srub == "this will go from system"
+
+        cleanup:
+        System.clearProperty("srub")
+
+    }
+
+
+    def assurePropsLoadedViaClassLoaderOnlyLoadPublic() {
+
+        given:
+        System.setProperty("srub", "this will go from system")
+
+
+        when:
+        def propsLoader =
+                new PropertiesLoader("someDir/aws-stage-tests-public.properties", "this-does-not-exist")
+
+        then:
+        def targetProps = propsLoader.load({ -> Class.getResource("/case7").path })
+
+
+        targetProps.pub == "this is public"
+        targetProps.grub == "this is grub"
+        targetProps.srub == "this will go from system"
+
+        cleanup:
+        System.clearProperty("srub")
+
+    }
+
+
 }

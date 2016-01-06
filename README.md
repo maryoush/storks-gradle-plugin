@@ -36,7 +36,7 @@ Integrates via arbitrary properties('cfProperties') map
 
 dependencies {
 		....
-		classpath group: 'com.hybris.cdm.storks', name: 'storks-gradle-plugin', version: '$version'
+		classpath group: 'com.hybris.profile', name: 'storks-gradle-plugin', version: '$version'
 	}
 	
 	
@@ -80,7 +80,7 @@ Integrates via system properties variable
 ```
 dependencies {
 		....
-		classpath group: 'com.hybris.cdm.storks', name: 'storks-gradle-plugin', version: '$version'
+		classpath group: 'com.hybris.profile', name: 'storks-gradle-plugin', version: '$version'
 	}
 	
 	

@@ -13,8 +13,8 @@ apply plugin: 'groovy'
 apply plugin: 'maven'
 apply plugin: 'maven-publish'
 
-group = 'com.hybris.cdm.storks'
-version = "0.6.${System.getenv().getOrDefault('bamboo_buildNumber', 'development')}"
+group = 'com.hybris.profile'
+version = "0.8.${System.getenv().getOrDefault('bamboo_buildNumber', 'development')}"
 
 repositories {
 	mavenLocal()

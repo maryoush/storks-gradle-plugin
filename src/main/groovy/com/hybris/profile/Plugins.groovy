@@ -1,3 +1,5 @@
+package com.hybris.profile
+
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 
