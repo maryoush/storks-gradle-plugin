@@ -36,6 +36,27 @@ class ProfilePropertiesLoaderTest extends Specification {
     }
 
 
+    def assurePropsLoadedViaClassLoaderStatic() {
+
+        given:
+        System.setProperty("srub", "this will go from system")
+
+
+        when:
+        def targetProps = PropertiesLoader.loadProperties("/case7/someDir/aws-stage-tests-public.properties")
+
+
+        then:
+        targetProps.pub == "this is public"
+        targetProps.grub == "this is grub"
+        targetProps.srub == "this will go from system"
+
+        cleanup:
+        System.clearProperty("srub")
+
+    }
+
+
     def assurePropsLoadedViaClassLoaderOnlyLoadPublic() {
 
         given:

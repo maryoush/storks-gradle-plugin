@@ -105,7 +105,11 @@ class PropertiesLoader {
 
         targetProps << propsLoader(publicFile, publicWrapper)
         try {
-            targetProps << propsLoader(privateFile, privateWrapper)
+            if (privateFile != null) {
+                targetProps << propsLoader(privateFile, privateWrapper)
+            } else {
+                log.warn("No private file provided ")
+            }
         }
         catch (ouch) {
             log.warn("Missing private properties configuration file : $privateFile", ouch)
@@ -117,14 +121,34 @@ class PropertiesLoader {
         targetProps //
                 .findAll { pair -> evaluateValue(pair.key) != null } //
                 .each { pair -> targetProps.put(pair.key, new ConfidentialPropertyValue(evaluateValue(pair.key))) }
-                .each { k, v -> log.warn("   $k -> $v") }
+
+
+        targetProps.each { k, v -> log.info("   $k -> $v") }
 
         targetProps
                 .collectEntries { entry -> [entry.key, entry.value.val] }
     }
 
+
+    static def loadFile = {
+        name ->
+            def resource = PropertiesLoader.class.getResource(name)
+
+            if (resource != null && resource.file != null) {
+                resource.file
+            } else {
+                name
+            }
+    }
+
+
+    public static loadProperties(def publicFile) {
+        def props = new PropertiesLoader(loadFile(publicFile), null)
+        return props.load()
+    }
+
     public static loadProperties(def publicFile, def privateFile) {
-        def props = new PropertiesLoader(publicFile, privateFile)
+        def props = new PropertiesLoader(loadFile(publicFile), loadFile(privateFile))
         return props.load()
     }
 
@@ -136,7 +160,7 @@ class PropertiesLoader {
             privateVal = Eval.xy(System.properties, key, "x[y]")
             log.debug(" evaluated $privateVal")
             if (privateVal == null) {
-                log.info("Trying to find fallback for  property  key " + key)
+                log.debug("Trying to find fallback for property key " + key)
                 privateVal = System.properties[key] ?: System.getenv(key) ?: null
             }
         }
