@@ -63,8 +63,10 @@ public class ProfilePropertiesTask extends AbstractTask {
         }
 
 
-        def propsLoader = new PropertiesLoader("$environment-$publicFileSuffix","$environment-$privateFileSuffix")
-        effectiveProperties << propsLoader.load({ -> project.projectDir})
+        def propsLoader = new PropertiesLoader("${project.projectDir}/${environment}-${publicFileSuffix}", //
+                "${project.projectDir}/${environment}-${privateFileSuffix}")
+
+        effectiveProperties << propsLoader.load()
 
     }
 

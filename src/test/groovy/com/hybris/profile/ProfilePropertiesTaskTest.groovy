@@ -191,53 +191,7 @@ class ProfilePropertiesTaskTest extends Specification {
     }
 
 
-    def assurePropsLoadedViaClassLoader() {
 
-        given:
-        System.setProperty("srub", "this will go from system")
-
-
-        when:
-        def propsLoader =
-                new PropertiesLoader("someDir/aws-stage-tests-public.properties", "otherDir/aws-stage-tests-private.properties")
-
-        then:
-        def targetProps = propsLoader.load(loadFile("/case7").getAbsolutePath())
-
-
-        targetProps.foo == "private foo"
-        targetProps.pub == "not public any more"
-        targetProps.grub == "this is grub"
-        targetProps.srub == "this will go from system"
-
-        cleanup:
-        System.clearProperty("srub")
-
-    }
-
-
-    def assurePropsLoadedViaClassLoaderOnlyLoadPublic() {
-
-        given:
-        System.setProperty("srub", "this will go from system")
-
-
-        when:
-        def propsLoader =
-                new PropertiesLoader("someDir/aws-stage-tests-public.properties", "this-does-not-exist")
-
-        then:
-        def targetProps = propsLoader.load({ -> Class.getResource("/case7").path })
-
-
-        targetProps.pub == "this is public"
-        targetProps.grub == "this is grub"
-        targetProps.srub == "this will go from system"
-
-        cleanup:
-        System.clearProperty("srub")
-
-    }
 
 
 }

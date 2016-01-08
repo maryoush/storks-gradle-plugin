@@ -15,7 +15,7 @@ class PropertiesLoader {
     private final String privateFile;
 
 
-    PropertiesLoader(final String publicFile, final String privateFile) {
+    PropertiesLoader(def publicFile, def privateFile) {
         this.privateFile = privateFile
         this.publicFile = publicFile
     }
@@ -82,9 +82,10 @@ class PropertiesLoader {
 
 
     private def propsLoader = {
-        rootDir , file, wrapper ->
+        fullFilePath, wrapper ->
             def props = new Properties()
-            props.load(new FileInputStream("$rootDir/$file"))
+            log.debug("Loading fullFilePath : $fullFilePath")
+            props.load(new FileInputStream(fullFilePath))
             props.collectEntries { pair -> wrapper(pair) }
     }
 
@@ -99,12 +100,12 @@ class PropertiesLoader {
     }
 
 
-    def load(def rootDir) {
-        def targetProps = new HashMap<String,String>()
+    private def load() {
+        def targetProps = new HashMap<String, String>()
 
-        targetProps << propsLoader(rootDir,publicFile, publicWrapper)
+        targetProps << propsLoader(publicFile, publicWrapper)
         try {
-            targetProps << propsLoader(rootDir,privateFile, privateWrapper)
+            targetProps << propsLoader(privateFile, privateWrapper)
         }
         catch (ouch) {
             log.warn("Missing private properties configuration file : $privateFile", ouch)
@@ -119,7 +120,12 @@ class PropertiesLoader {
                 .each { k, v -> log.warn("   $k -> $v") }
 
         targetProps
-                .collectEntries { entry -> [entry.key, entry.value.val]}
+                .collectEntries { entry -> [entry.key, entry.value.val] }
+    }
+
+    public static loadProperties(def publicFile, def privateFile) {
+        def props = new PropertiesLoader(publicFile, privateFile)
+        return props.load()
     }
 
 
