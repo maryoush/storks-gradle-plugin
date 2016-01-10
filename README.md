@@ -86,12 +86,14 @@ dependencies {
 	
 apply plugin: 'storks'
 
-task prepareSystemProperties(type: ProfilePropertiesTask) {
+
+task prepareSystemProperties(type: com.hybris.profile.ProfilePropertiesTask) {
 	effectiveProperties System.properties
 }
 
+
 task acceptanceTests(type: Test) {
-	dependsOn 'prepareSystemProperties'
+	include 'com/hybris/cdm/graph/**/*Spec*'
 	systemProperties System.getProperties()
 }
 
@@ -100,5 +102,38 @@ jettyEclipseRun {
 	contextPath = ''
 }
 
+task localAcceptanceTests(type: Test) {
+	include 'com/hybris/cdm/graph/**/*Spec*'
+	systemProperties System.getProperties()
+}
 
+
+daemonJettyEclipseRun{
+	dependsOn 'prepareSystemProperties'
+	dependsOn 'war'
+	daemon true
+}
+
+
+```
+
+## Client side configuartion (acceptance tests)
+
+Use the 'PropertiesLoader''s 'loadProperties' method point the public, [private] properties files for client side configuration set up.
+
+
+```
+	static Map<String, String> props = PropertiesLoader.loadProperties("/acceptance/aws-prod-test-public.properties")
+
+	static def defaultConfig = [
+			testTenant                       : props.getOrDefault("TEST_TENANT", "storktest"),
+			testClient                       : props.getOrDefault("TEST_CLIENT", "storks.storkstest"),
+			secureGraphServiceURL            : props.getOrDefault("SECURE_GRAPH_URL", getSecureGraphServiceURL()),
+			pubSubURL                        : props.getOrDefault("PUB_SUB_URL", "http://pubsub-b2.us-east.stage.internal.yaas.io"),
+			pubSubProductNodeChangedEventType: props.getOrDefault("PUBSUB_EVENT_TYPE", "enricherResolutionSegment"),
+			securedGraphClientName           : props.getOrDefault("SECURED_GRAPH_CLIENT_NAME", "hybris.securedgraph"),
+			dispatcherClientName             : props.getOrDefault("DISPATCHER_CLIENT_NAME", "hybris.dispatcher"),
+			userName                         : props.getOrDefault("REST_CLIENT_USERNAME", "XXXX")
+	]
+	
 ```
