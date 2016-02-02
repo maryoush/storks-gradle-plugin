@@ -129,7 +129,7 @@ Use the 'PropertiesLoader''s 'loadProperties' method point the public, [private]
 			testTenant                       : props.getOrDefault("TEST_TENANT", "storktest"),
 			testClient                       : props.getOrDefault("TEST_CLIENT", "storks.storkstest"),
 			secureGraphServiceURL            : props.getOrDefault("SECURE_GRAPH_URL", getSecureGraphServiceURL()),
-			pubSubURL                        : props.getOrDefault("PUB_SUB_URL", "http://pubsub-b2.us-east.stage.internal.yaas.io"),
+			pubSubURL                        : props.getOrDefault("PUB_SUB_URL", "http://XXXXX.stage.internal.YYYY.io"),
 			pubSubProductNodeChangedEventType: props.getOrDefault("PUBSUB_EVENT_TYPE", "enricherResolutionSegment"),
 			securedGraphClientName           : props.getOrDefault("SECURED_GRAPH_CLIENT_NAME", "hybris.securedgraph"),
 			dispatcherClientName             : props.getOrDefault("DISPATCHER_CLIENT_NAME", "hybris.dispatcher"),
